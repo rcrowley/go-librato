@@ -1,7 +1,10 @@
 include $(GOROOT)/src/Make.inc
 
 TARG=librato
-GOFILES=librato.go
+GOFILES=\
+	collated.go\
+	librato.go\
+	simple.go\
 
 include $(GOROOT)/src/Make.pkg
 
