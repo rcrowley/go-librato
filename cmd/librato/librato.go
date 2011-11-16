@@ -12,6 +12,7 @@ import (
 )
 
 // Storage for flags.
+var collate int
 var user, token, source string
 
 // Create a map suitable for use as a custom counter metric from the given
@@ -48,6 +49,12 @@ func customGauge(match []string) map[string]int64 {
 
 // Initialize the flags with their default values from the environment.
 func init() {
+	flag.IntVar(
+		&collate,
+		"c",
+		0,
+		"maximum number of Librato Metrics API requests to collate",
+	)
 	flag.StringVar(
 		&user,
 		"u",
@@ -84,7 +91,12 @@ func main() {
 	}
 
 	// Create a Librato Metrics client with the given credentials and source.
-	m := librato.NewMetrics(user, token, source)
+	var m librato.Metrics
+	if 0 < collate {
+		m = librato.NewCollatedMetrics(user, token, source, collate)
+	} else {
+		m = librato.NewMetrics(user, token, source)
+	}
 
 	// Regular expressions for parsing standard input.  Valid lines contain
 	// a literal 'c' or 'g' character to identify the type of the metric, a

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"http"
-	"io"
 	"json"
 	"log"
 	"os"
@@ -114,24 +113,35 @@ func (m *SimpleMetrics) Wait() {
 }
 
 // Serialize an `application/json` request body and do one HTTP roundtrip
-// using the `http` package's `DefaultClient`.
+// using the `http` package's `DefaultClient`.  This wrapper constructs the
+// appropriate Librato Metrics API endpoint, sets the `Content-Type` header
+// to `application/json`, and sets the `Authorization` header for  HTTP Basic
+// authentication from the `SimpleMetrics` struct.
 func (m *SimpleMetrics) do(
 	format, name string,
 	body map[string]interface{},
-) (*http.Response, os.Error) {
+) os.Error {
 	if "" != m.source { body["source"] = m.source }
 	b, err := json.Marshal(body)
-	if nil != err { return nil, err }
-	req, err := m.newRequest(
+	if nil != err { return err }
+	req, err := http.NewRequest(
 		"POST",
-		fmt.Sprintf(format, url.QueryEscape(name)),
+		fmt.Sprintf(
+			"https://metrics-api.librato.com/v1%s",
+			fmt.Sprintf(
+				format,
+				url.QueryEscape(name),
+			),
+		),
 		bytes.NewBuffer(b),
 	)
-	if nil != err { return nil, err }
+	if nil != err { return err }
+	req.Header.Add("Content-Type", "application/json")
+	req.SetBasicAuth(m.user, m.token)
 	fmt.Printf("req: %v\n", req)
 	resp, err := http.DefaultClient.Do(req)
 	fmt.Printf("resp: %v\n", resp)
-	return resp, err
+	return err
 }
 
 // Create a custom metric channel and begin processing messages sent
@@ -139,7 +149,7 @@ func (m *SimpleMetrics) do(
 func (m *SimpleMetrics) newCustomMetric(
 	format, name string,
 ) chan map[string]int64 {
-	ch := make(chan map[string]int64) // TODO Buffer this channel?
+	ch := make(chan map[string]int64)
 	go func() {
 		m.running <- true
 		for {
@@ -147,7 +157,7 @@ func (m *SimpleMetrics) newCustomMetric(
 			if !ok { break }
 			body := make(map[string]interface{})
 			for k, v := range obj { body[k] = v }
-			_, err := m.do(format, name, body)
+			err := m.do(format, name, body)
 			if nil != err { log.Println(err) }
 		}
 		m.running <- false
@@ -158,33 +168,17 @@ func (m *SimpleMetrics) newCustomMetric(
 // Create a metric channel and begin processing messages sent
 // to it in a background goroutine.
 func (m *SimpleMetrics) newMetric(format, name string) chan int64 {
-	ch := make(chan int64) // TODO Buffer this channel?
+	ch := make(chan int64)
 	go func() {
 		m.running <- true
 		for {
 			v, ok := <-ch
 			if !ok { break }
 			body := map[string]interface{} { "value": v }
-			_, err := m.do(format, name, body)
+			err := m.do(format, name, body)
 			if nil != err { log.Println(err) }
 		}
 		m.running <- false
 	}()
 	return ch
-}
-
-// Create an `http.Request` object.  This wrapper prefixes the URL with
-// the Librato Metrics API endpoint, sets the `Content-Type` header to
-// `application/json`, and sets the `Authorization` header for  HTTP Basic
-// authentication from the `Metrics` struct.
-func (m *SimpleMetrics) newRequest(
-	method, path string,
-	body io.Reader,
-) (*http.Request, os.Error) {
-	url := fmt.Sprintf("https://metrics-api.librato.com/v1%s", path)
-	req, err := http.NewRequest(method, url, body)
-	if nil != err { return req, err }
-	req.Header.Add("Content-Type", "application/json")
-	req.SetBasicAuth(m.user, m.token)
-	return req, nil
 }
