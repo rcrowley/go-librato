@@ -40,6 +40,9 @@ func NewCollatedMetrics(
 		make(map[string]chan map[string]int64),
 		make(map[string]chan map[string]int64),
 	}
+
+	// Track the number of running goroutines.  When it returns to zero,
+	// close the collation channels.
 	go func() {
 		var n uint
 		for {
@@ -49,6 +52,8 @@ func NewCollatedMetrics(
 		close(m.collateCounters)
 		close(m.collateGauges)
 	}()
+
+	// Receive metric bodies on the collation channels.
 	go func() {
 		for {
 			i := 0
@@ -76,6 +81,7 @@ func NewCollatedMetrics(
 		}
 		m.quit <- true
 	}()
+
 	return m
 }
 

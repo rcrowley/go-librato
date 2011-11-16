@@ -30,6 +30,9 @@ func NewMetrics(user, token, source string) *SimpleMetrics {
 		make(map[string]chan map[string]int64),
 		make(map[string]chan map[string]int64),
 	}
+
+	// Track the number of running goroutines.  When it returns to zero,
+	// send a message to the quit channel.
 	go func() {
 		var n uint
 		for {
@@ -38,6 +41,7 @@ func NewMetrics(user, token, source string) *SimpleMetrics {
 		}
 		m.quit <- true
 	}()
+
 	return m
 }
 
