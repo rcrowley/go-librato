@@ -87,29 +87,33 @@ func (m *SimpleMetrics) GetGauge(name string) chan int64 {
 
 // Create a counter channel by the given name.
 func (m *SimpleMetrics) NewCounter(name string) chan int64 {
-	ch := m.newMetric("/counters/%s.json", name)
+	ch := make(chan int64)
 	m.counters[name] = ch
+	m.newMetric("/counters/%s.json", name, ch)
 	return ch
 }
 
 // Create a custom counter channel by the given name.
 func (m *SimpleMetrics) NewCustomCounter(name string) chan map[string]int64 {
-	ch := m.newCustomMetric("/counters/%s.json", name)
+	ch := make(chan map[string]int64)
 	m.customCounters[name] = ch
+	m.newMetric("/counters/%s.json", name, ch)
 	return ch
 }
 
 // Create a custom gauge channel by the given name.
 func (m *SimpleMetrics) NewCustomGauge(name string) chan map[string]int64 {
-	ch := m.newCustomMetric("/gauges/%s.json", name)
+	ch := make(chan map[string]int64)
 	m.customGauges[name] = ch
+	m.newMetric("/gauges/%s.json", name, ch)
 	return ch
 }
 
 // Create a gauge channel by the given name.
 func (m *SimpleMetrics) NewGauge(name string) chan int64 {
-	ch := m.newMetric("/gauges/%s.json", name)
+	ch := make(chan int64)
 	m.gauges[name] = ch
+	m.newMetric("/gauges/%s.json", name, ch)
 	return ch
 }
 
@@ -151,41 +155,26 @@ func (m *SimpleMetrics) do(
 	return err
 }
 
-// Create a custom metric channel and begin processing messages sent
-// to it in a background goroutine.
-func (m *SimpleMetrics) newCustomMetric(
-	format, name string,
-) chan map[string]int64 {
-	ch := make(chan map[string]int64)
-	go func() {
-		m.running <- true
-		for {
-			obj, ok := <-ch
-			if !ok { break }
-			body := make(map[string]interface{})
-			for k, v := range obj { body[k] = v }
-			err := m.do(format, name, body)
-			if nil != err { log.Println(err) }
-		}
-		m.running <- false
-	}()
-	return ch
-}
-
 // Create a metric channel and begin processing messages sent
 // to it in a background goroutine.
-func (m *SimpleMetrics) newMetric(format, name string) chan int64 {
-	ch := make(chan int64)
+func (m *SimpleMetrics) newMetric(format, name string, i interface{}) {
 	go func() {
 		m.running <- true
 		for {
-			v, ok := <-ch
+			var obj map[string]int64
+			var ok bool
+			body := make(map[string]interface{})
+			switch ch := i.(type) {
+			case chan int64:
+				body["value"], ok = <-ch
+			case chan map[string]int64:
+				obj, ok = <-ch
+				for k, v := range obj { body[k] = v }
+			}
 			if !ok { break }
-			body := map[string]interface{} { "value": v }
 			err := m.do(format, name, body)
 			if nil != err { log.Println(err) }
 		}
 		m.running <- false
 	}()
-	return ch
 }
