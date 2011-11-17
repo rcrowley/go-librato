@@ -22,7 +22,7 @@ type SimpleMetrics struct {
 
 // Create a new `SimpleMetrics` struct with the given credentials and source
 // tag.  Initialize all the channels, maps, and goroutines used internally.
-func NewMetrics(user, token, source string) *SimpleMetrics {
+func NewSimpleMetrics(user, token, source string) Metrics {
 	m := &SimpleMetrics{
 		user, token, source,
 		make(chan bool), make(chan bool),
@@ -43,6 +43,9 @@ func NewMetrics(user, token, source string) *SimpleMetrics {
 	}()
 
 	return m
+}
+func NewMetrics(user, token, source string) Metrics {
+	return NewSimpleMetrics(user, token, source)
 }
 
 // Close all metric channels so no new messages may be sent.  This is

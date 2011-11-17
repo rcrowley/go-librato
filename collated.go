@@ -29,7 +29,7 @@ type CollatedMetrics struct {
 func NewCollatedMetrics(
 	user, token, source string,
 	collateMax int,
-) *CollatedMetrics {
+) Metrics {
 	m := &CollatedMetrics{
 		user, token, source,
 		collateMax,

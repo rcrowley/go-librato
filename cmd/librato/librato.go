@@ -95,7 +95,7 @@ func main() {
 	if 0 < collate {
 		m = librato.NewCollatedMetrics(user, token, source, collate)
 	} else {
-		m = librato.NewMetrics(user, token, source)
+		m = librato.NewSimpleMetrics(user, token, source)
 	}
 
 	// Regular expressions for parsing standard input.  Valid lines contain
