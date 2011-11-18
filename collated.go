@@ -126,7 +126,7 @@ func (m *CollatedMetrics) GetGauge(name string) chan int64 {
 func (m *CollatedMetrics) NewCounter(name string) chan int64 {
 	ch := make(chan int64)
 	m.counters[name] = ch
-	m.newMetric(name, ch, m.collateCounters)
+	go m.newMetric(name, ch, m.collateCounters)
 	return ch
 }
 
@@ -134,7 +134,7 @@ func (m *CollatedMetrics) NewCounter(name string) chan int64 {
 func (m *CollatedMetrics) NewCustomCounter(name string) chan map[string]int64 {
 	ch := make(chan map[string]int64)
 	m.customCounters[name] = ch
-	m.newMetric(name, ch, m.collateCounters)
+	go m.newMetric(name, ch, m.collateCounters)
 	return ch
 }
 
@@ -142,7 +142,7 @@ func (m *CollatedMetrics) NewCustomCounter(name string) chan map[string]int64 {
 func (m *CollatedMetrics) NewCustomGauge(name string) chan map[string]int64 {
 	ch := make(chan map[string]int64)
 	m.customGauges[name] = ch
-	m.newMetric(name, ch, m.collateGauges)
+	go m.newMetric(name, ch, m.collateGauges)
 	return ch
 }
 
@@ -150,7 +150,7 @@ func (m *CollatedMetrics) NewCustomGauge(name string) chan map[string]int64 {
 func (m *CollatedMetrics) NewGauge(name string) chan int64 {
 	ch := make(chan int64)
 	m.gauges[name] = ch
-	m.newMetric(name, ch, m.collateGauges)
+	go m.newMetric(name, ch, m.collateGauges)
 	return ch
 }
 
@@ -178,33 +178,23 @@ func (m *CollatedMetrics) do(body map[string]interface{}) os.Error {
 	req.Header.Add("Content-Type", "application/json")
 	req.SetBasicAuth(m.user, m.token)
 	fmt.Printf("req: %v\n", req)
-	resp, err := http.DefaultClient.Do(req)
-	fmt.Printf("resp: %v\n", resp)
+	_, err = http.DefaultClient.Do(req)
 	return err
 }
 
 // Create a metric channel and begin processing messages sent
 // to it in a background goroutine.
-func (m *CollatedMetrics) newMetric(name string, i interface{}, ch chan map[string]interface{}) {
-	go func() {
-		m.running <- true
-		for {
-			var obj map[string]int64
-			var ok bool
-			body := map[string]interface{} {
-				"measure_time": time.Seconds(),
-				"name": name,
-			}
-			switch ch := i.(type) {
-			case chan int64:
-				body["value"], ok = <-ch
-			case chan map[string]int64:
-				obj, ok = <-ch
-				for k, v := range obj { body[k] = v }
-			}
-			if !ok { break }
-			ch <- body
-		}
-		m.running <- false
-	}()
+func (m *CollatedMetrics) newMetric(
+	name string,
+	i interface{},
+	ch chan map[string]interface{},
+) {
+	m.running <- true
+	for {
+		body := map[string]interface{} { "name": name }
+		if !handle(i, body) { break }
+		body["measure_time"] = time.Seconds()
+		ch <- body
+	}
+	m.running <- false
 }

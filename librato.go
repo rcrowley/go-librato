@@ -16,3 +16,16 @@ type Metrics interface {
 	NewGauge(name string) chan int64
 	Wait()
 }
+
+func handle(i interface{}, body map[string]interface{}) bool {
+	var obj map[string]int64
+	var ok bool
+	switch ch := i.(type) {
+	case chan int64:
+		body["value"], ok = <-ch
+	case chan map[string]int64:
+		obj, ok = <-ch
+		for k, v := range obj { body[k] = v }
+	}
+	return ok
+}

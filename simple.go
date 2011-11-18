@@ -89,7 +89,7 @@ func (m *SimpleMetrics) GetGauge(name string) chan int64 {
 func (m *SimpleMetrics) NewCounter(name string) chan int64 {
 	ch := make(chan int64)
 	m.counters[name] = ch
-	m.newMetric("/counters/%s.json", name, ch)
+	go m.newMetric("/counters/%s.json", name, ch)
 	return ch
 }
 
@@ -97,7 +97,7 @@ func (m *SimpleMetrics) NewCounter(name string) chan int64 {
 func (m *SimpleMetrics) NewCustomCounter(name string) chan map[string]int64 {
 	ch := make(chan map[string]int64)
 	m.customCounters[name] = ch
-	m.newMetric("/counters/%s.json", name, ch)
+	go m.newMetric("/counters/%s.json", name, ch)
 	return ch
 }
 
@@ -105,7 +105,7 @@ func (m *SimpleMetrics) NewCustomCounter(name string) chan map[string]int64 {
 func (m *SimpleMetrics) NewCustomGauge(name string) chan map[string]int64 {
 	ch := make(chan map[string]int64)
 	m.customGauges[name] = ch
-	m.newMetric("/gauges/%s.json", name, ch)
+	go m.newMetric("/gauges/%s.json", name, ch)
 	return ch
 }
 
@@ -113,7 +113,7 @@ func (m *SimpleMetrics) NewCustomGauge(name string) chan map[string]int64 {
 func (m *SimpleMetrics) NewGauge(name string) chan int64 {
 	ch := make(chan int64)
 	m.gauges[name] = ch
-	m.newMetric("/gauges/%s.json", name, ch)
+	go m.newMetric("/gauges/%s.json", name, ch)
 	return ch
 }
 
@@ -150,31 +150,19 @@ func (m *SimpleMetrics) do(
 	req.Header.Add("Content-Type", "application/json")
 	req.SetBasicAuth(m.user, m.token)
 	fmt.Printf("req: %v\n", req)
-	resp, err := http.DefaultClient.Do(req)
-	fmt.Printf("resp: %v\n", resp)
+	_, err = http.DefaultClient.Do(req)
 	return err
 }
 
 // Create a metric channel and begin processing messages sent
 // to it in a background goroutine.
 func (m *SimpleMetrics) newMetric(format, name string, i interface{}) {
-	go func() {
-		m.running <- true
-		for {
-			var obj map[string]int64
-			var ok bool
-			body := make(map[string]interface{})
-			switch ch := i.(type) {
-			case chan int64:
-				body["value"], ok = <-ch
-			case chan map[string]int64:
-				obj, ok = <-ch
-				for k, v := range obj { body[k] = v }
-			}
-			if !ok { break }
-			err := m.do(format, name, body)
-			if nil != err { log.Println(err) }
-		}
-		m.running <- false
-	}()
+	m.running <- true
+	for {
+		body := make(map[string]interface{})
+		if !handle(i, body) { break }
+		err := m.do(format, name, body)
+		if nil != err { log.Println(err) }
+	}
+	m.running <- false
 }
