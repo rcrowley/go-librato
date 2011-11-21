@@ -159,6 +159,6 @@ func main() {
 func usage() {
 	fmt.Fprintln(
 		os.Stderr,
-		"Usage: librato [-u <user>] [-t <token>] [-s <source>]",
+		"Usage: librato [-c <collate>] [-u <user>] [-t <token>] [-s <source>]",
 	)
 }

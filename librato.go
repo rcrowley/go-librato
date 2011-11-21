@@ -3,7 +3,6 @@
 // <https://github.com/rcrowley/go-librato>
 package librato
 
-// TODO
 type Metrics interface {
 	Close()
 	GetCounter(name string) chan int64
