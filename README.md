@@ -49,6 +49,31 @@ export LIBRATO_SOURCE="$(hostname)"
 tail -F /var/log/thing | librato -c 100
 ```
 
+The `librato` tool accepts one metric per line.  The first field is either a `c` or a `g` to indicate that the metric is a counter or a gauge.  The second field is the name of the metric, which may not contain spaces.  The remaining fields may either be numeric or `-` but must provide a combination of non-`-` values acceptable to the Librato Metrics API.
+
+Regular expressions:
+
+```
+# Value-only counters and gauges.
+^([cg]) ([^ ]+) ([0-9]+)$
+
+# Custom counters with a value and optionally a timestamp.
+^(c) ([^ ]+) ([0-9]+) (-|[0-9]+)$
+
+# Custom gauges with a value, timestamp, count, sum, max, min, and sum-of-squares (or some combination thereof).
+^(g) ([^ ]+) (-|[0-9]+) (-|[0-9]+) (-|[0-9]+) (-|[0-9]+) (-|[0-9]+) (-|[0-9]+) (-|[0-9]+)$
+```
+
+Examples:
+
+```
+c foo 47
+g bar 47
+c baz 47 1234567890
+g bang 47 1234567890 - - - - -
+g bang - 1234567890 2 94 47 47 4418
+```
+
 Installation
 ------------
 
