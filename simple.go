@@ -149,7 +149,6 @@ func (m *SimpleMetrics) do(
 	if nil != err { return err }
 	req.Header.Add("Content-Type", "application/json")
 	req.SetBasicAuth(m.user, m.token)
-	fmt.Printf("req: %v\n", req)
 	_, err = http.DefaultClient.Do(req)
 	return err
 }
