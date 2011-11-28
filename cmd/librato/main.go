@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/rcrowley/go-librato"
+	"io"
 	"log"
 	"os"
 	"regexp"
@@ -20,9 +21,13 @@ var user, token, source string
 func customCounter(match []string) map[string]int64 {
 	obj := make(map[string]int64)
 	value, err := strconv.Atoi64(match[3])
-	if nil == err { obj["value"] = value }
+	if nil == err {
+		obj["value"] = value
+	}
 	measureTime, err := strconv.Atoi64(match[4])
-	if nil == err { obj["measure_time"] = measureTime }
+	if nil == err {
+		obj["measure_time"] = measureTime
+	}
 	return obj
 }
 
@@ -31,19 +36,33 @@ func customCounter(match []string) map[string]int64 {
 func customGauge(match []string) map[string]int64 {
 	obj := make(map[string]int64)
 	value, err := strconv.Atoi64(match[3])
-	if nil == err { obj["value"] = value }
+	if nil == err {
+		obj["value"] = value
+	}
 	measureTime, err := strconv.Atoi64(match[4])
-	if nil == err { obj["measure_time"] = measureTime }
+	if nil == err {
+		obj["measure_time"] = measureTime
+	}
 	count, err := strconv.Atoi64(match[5])
-	if nil == err { obj["count"] = count }
+	if nil == err {
+		obj["count"] = count
+	}
 	sum, err := strconv.Atoi64(match[6])
-	if nil == err { obj["sum"] = sum }
+	if nil == err {
+		obj["sum"] = sum
+	}
 	max, err := strconv.Atoi64(match[7])
-	if nil == err { obj["max"] = max }
+	if nil == err {
+		obj["max"] = max
+	}
 	min, err := strconv.Atoi64(match[8])
-	if nil == err { obj["min"] = min }
+	if nil == err {
+		obj["min"] = min
+	}
 	sumSquares, err := strconv.Atoi64(match[9])
-	if nil == err { obj["sum_squares"] = sumSquares }
+	if nil == err {
+		obj["sum_squares"] = sumSquares
+	}
 	return obj
 }
 
@@ -112,10 +131,10 @@ func main() {
 	//                                       c   name    value  measure_time
 	reCustomCounter := regexp.MustCompile("^(c) ([^ ]+) ([0-9]+) (-|[0-9]+)$")
 	reCustomGauge := regexp.MustCompile(
-	//     g   name      value  measure_time   count      sum
+		//     g   name      value  measure_time   count      sum
 		"^(g) ([^ ]+) (-|[0-9]+) (-|[0-9]+) (-|[0-9]+) (-|[0-9]+) " +
-	//      max        min     sum_squares
-		"(-|[0-9]+) (-|[0-9]+) (-|[0-9]+)$")
+			//      max        min     sum_squares
+			"(-|[0-9]+) (-|[0-9]+) (-|[0-9]+)$")
 
 	// Read standard input line-buffered.  Break out of this loop on EOF.
 	// Log an error message and exit if any other error is encountered.
@@ -123,8 +142,12 @@ func main() {
 	for {
 		line, _, err := stdin.ReadLine()
 		s := string(line)
-		if os.EOF == err { break }
-		if nil != err { log.Fatalln(err) }
+		if io.EOF == err {
+			break
+		}
+		if nil != err {
+			log.Fatalln(err)
+		}
 
 		// Match this line against the regular expressions above.  In
 		// case a line doesn't match, log the line and continue.  Get
@@ -132,8 +155,10 @@ func main() {
 		if match := re.FindStringSubmatch(s); nil != match {
 			var ch chan int64
 			switch match[1] {
-			case "c": ch = m.GetCounter(match[2])
-			case "g": ch = m.GetGauge(match[2])
+			case "c":
+				ch = m.GetCounter(match[2])
+			case "g":
+				ch = m.GetGauge(match[2])
 			}
 			value, _ := strconv.Atoi64(match[3])
 			ch <- value
@@ -141,7 +166,9 @@ func main() {
 			m.GetCustomCounter(match[2]) <- customCounter(match)
 		} else if match := reCustomGauge.FindStringSubmatch(s); nil != match {
 			m.GetCustomGauge(match[2]) <- customGauge(match)
-		} else { log.Printf("malformed line \"%v\"\n", s) }
+		} else {
+			log.Printf("malformed line \"%v\"\n", s)
+		}
 
 	}
 

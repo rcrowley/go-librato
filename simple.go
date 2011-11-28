@@ -2,21 +2,20 @@ package librato
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
-	"http"
-	"json"
 	"log"
-	"os"
-	"url"
+	"net/http"
+	"net/url"
 )
 
 // Librato `SimpleMetrics` structs encapsulate the credentials used to send
 // metrics to the API, the source tag for these metrics, bookkeeping for
 // goroutines, and lookup tables for existing metric channels.
 type SimpleMetrics struct {
-	user, token, source string
-	quit, running chan bool
-	counters, gauges map[string]chan int64
+	user, token, source          string
+	quit, running                chan bool
+	counters, gauges             map[string]chan int64
 	customCounters, customGauges map[string]chan map[string]int64
 }
 
@@ -36,8 +35,14 @@ func NewSimpleMetrics(user, token, source string) Metrics {
 	go func() {
 		var n uint
 		for {
-			if <-m.running { n++ } else if 0 < n { n-- }
-			if 0 == n { break }
+			if <-m.running {
+				n++
+			} else if 0 < n {
+				n--
+			}
+			if 0 == n {
+				break
+			}
 		}
 		m.quit <- true
 	}()
@@ -51,37 +56,53 @@ func NewMetrics(user, token, source string) Metrics {
 // Close all metric channels so no new messages may be sent.  This is
 // a prerequisite to `Wait`ing.
 func (m *SimpleMetrics) Close() {
-	for _, ch := range m.counters { close(ch) }
-	for _, ch := range m.gauges { close(ch) }
-	for _, ch := range m.customCounters { close(ch) }
-	for _, ch := range m.customGauges { close(ch) }
+	for _, ch := range m.counters {
+		close(ch)
+	}
+	for _, ch := range m.gauges {
+		close(ch)
+	}
+	for _, ch := range m.customCounters {
+		close(ch)
+	}
+	for _, ch := range m.customGauges {
+		close(ch)
+	}
 }
 
 // Get (possibly by creating) a counter channel by the given name.
 func (m *SimpleMetrics) GetCounter(name string) chan int64 {
 	ch, ok := m.counters[name]
-	if ok { return ch }
+	if ok {
+		return ch
+	}
 	return m.NewCounter(name)
 }
 
 // Get (possibly by creating) a custom counter channel by the given name.
 func (m *SimpleMetrics) GetCustomCounter(name string) chan map[string]int64 {
 	ch, ok := m.customCounters[name]
-	if ok { return ch }
+	if ok {
+		return ch
+	}
 	return m.NewCustomCounter(name)
 }
 
 // Get (possibly by creating) a custom gauge channel by the given name.
 func (m *SimpleMetrics) GetCustomGauge(name string) chan map[string]int64 {
 	ch, ok := m.customGauges[name]
-	if ok { return ch }
+	if ok {
+		return ch
+	}
 	return m.NewCustomGauge(name)
 }
 
 // Get (possibly by creating) a gauge channel by the given name.
 func (m *SimpleMetrics) GetGauge(name string) chan int64 {
 	ch, ok := m.gauges[name]
-	if ok { return ch }
+	if ok {
+		return ch
+	}
 	return m.NewGauge(name)
 }
 
@@ -128,13 +149,15 @@ func (m *SimpleMetrics) Wait() {
 // appropriate Librato Metrics API endpoint, sets the `Content-Type` header
 // to `application/json`, and sets the `Authorization` header for  HTTP Basic
 // authentication from the `SimpleMetrics` struct.
-func (m *SimpleMetrics) do(
-	format, name string,
-	body map[string]interface{},
-) os.Error {
-	if "" != m.source { body["source"] = m.source }
+func (m *SimpleMetrics) do(format, name string,
+	body map[string]interface{}) error {
+	if "" != m.source {
+		body["source"] = m.source
+	}
 	b, err := json.Marshal(body)
-	if nil != err { return err }
+	if nil != err {
+		return err
+	}
 	req, err := http.NewRequest(
 		"POST",
 		fmt.Sprintf(
@@ -146,7 +169,9 @@ func (m *SimpleMetrics) do(
 		),
 		bytes.NewBuffer(b),
 	)
-	if nil != err { return err }
+	if nil != err {
+		return err
+	}
 	req.Header.Add("Content-Type", "application/json")
 	req.SetBasicAuth(m.user, m.token)
 	_, err = http.DefaultClient.Do(req)
@@ -159,9 +184,13 @@ func (m *SimpleMetrics) newMetric(format, name string, i interface{}) {
 	m.running <- true
 	for {
 		body := make(map[string]interface{})
-		if !handle(i, body) { break }
+		if !handle(i, body) {
+			break
+		}
 		err := m.do(format, name, body)
-		if nil != err { log.Println(err) }
+		if nil != err {
+			log.Println(err)
+		}
 	}
 	m.running <- false
 }
