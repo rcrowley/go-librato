@@ -82,7 +82,7 @@ Installation requires a working Go build environment.  See their [Getting Starte
 As a library:
 
 ```sh
-goinstall github.com/rcrowley/go-librato
+go install github.com/rcrowley/go-librato
 ```
 
 The `librato.a` library will by in `$GOROOT/pkg/${GOOS}_${GOARCH}/github.com/rcrowley/go-librato` should be linkable without further configuration.
@@ -91,8 +91,8 @@ As a command-line tool:
 
 ```sh
 git clone git://github.com/rcrowley/go-librato.git
-cd go-librato
-gomake
+cd go-librato/cmd/librato
+go install
 ```
 
 The `librato` tool will be in `$GOBIN`.
