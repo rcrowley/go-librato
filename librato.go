@@ -16,15 +16,22 @@ type Metrics interface {
 	Wait()
 }
 
-func handle(i interface{}, body map[string]interface{}) bool {
+
+func handle(i interface{}, bodyMetric tmetric) bool {
 	var obj map[string]int64
 	var ok bool
 	switch ch := i.(type) {
 	case chan int64:
-		body["value"], ok = <-ch
+		bodyMetric["value"], ok = <-ch
 	case chan map[string]int64:
 		obj, ok = <-ch
-		for k, v := range obj { body[k] = v }
+		for k, v := range obj { bodyMetric[k] = v }
 	}
 	return ok
 }
+
+
+// models http://dev.librato.com/v1/post/metrics (3) Array format (JSON only)
+type tbody    map[string]tibody
+type tibody   []tmetric
+type tmetric map[string]interface{}
