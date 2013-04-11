@@ -185,7 +185,7 @@ func (m *SimpleMetrics) newMetric(mtype, name string, i interface{}) {
 	m.running <- true
 	for {
 		body := make(tbody)
-		body[mtype] = tibody{ tmetric {} }
+		body[mtype] = tibody { tmetric { "name" : name} }
 		if !handle(i, body[mtype][0]) {
 			break
 		}
