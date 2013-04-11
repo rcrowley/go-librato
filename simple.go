@@ -5,7 +5,16 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"fmt"
+	"runtime"
 )
+
+// Set the UserAgent string
+const Version = "0.1"
+var uaString = func() string {
+	return fmt.Sprintf("go-librato/%s (go; %s; %s-%s)",
+		Version, runtime.Version(), runtime.GOARCH, runtime.GOOS)
+}()
 
 // Librato `SimpleMetrics` structs encapsulate the credentials used to send
 // metrics to the API, the source tag for these metrics, bookkeeping for
@@ -164,6 +173,7 @@ func (m *SimpleMetrics) do(mtype, name string, body tbody) error {
 		return err
 	}
 	req.Header.Add("Content-Type", "application/json")
+	req.Header.Set("User-Agent", uaString)
 	req.SetBasicAuth(m.user, m.token)
 	_, err = http.DefaultClient.Do(req)
 	return err
