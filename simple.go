@@ -3,14 +3,15 @@ package librato
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
-	"fmt"
 	"runtime"
 )
 
 // Set the UserAgent string
 const Version = "0.1"
+
 var uaString = func() string {
 	return fmt.Sprintf("go-librato/%s (go; %s; %s-%s)",
 		Version, runtime.Version(), runtime.GOARCH, runtime.GOOS)
@@ -185,7 +186,7 @@ func (m *SimpleMetrics) newMetric(mtype, name string, i interface{}) {
 	m.running <- true
 	for {
 		body := make(tbody)
-		body[mtype] = tibody { tmetric { "name" : name} }
+		body[mtype] = tibody{tmetric{"name": name}}
 		if !handle(i, body[mtype][0]) {
 			break
 		}
