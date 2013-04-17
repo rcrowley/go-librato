@@ -6,8 +6,16 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
+	"runtime"
 )
+
+// Set the UserAgent string
+const Version = "0.1"
+
+var uaString = func() string {
+	return fmt.Sprintf("go-librato/%s (go; %s; %s-%s)",
+		Version, runtime.Version(), runtime.GOARCH, runtime.GOOS)
+}()
 
 // Librato `SimpleMetrics` structs encapsulate the credentials used to send
 // metrics to the API, the source tag for these metrics, bookkeeping for
@@ -110,7 +118,7 @@ func (m *SimpleMetrics) GetGauge(name string) chan int64 {
 func (m *SimpleMetrics) NewCounter(name string) chan int64 {
 	ch := make(chan int64)
 	m.counters[name] = ch
-	go m.newMetric("/counters/%s.json", name, ch)
+	go m.newMetric("counters", name, ch)
 	return ch
 }
 
@@ -118,7 +126,7 @@ func (m *SimpleMetrics) NewCounter(name string) chan int64 {
 func (m *SimpleMetrics) NewCustomCounter(name string) chan map[string]int64 {
 	ch := make(chan map[string]int64)
 	m.customCounters[name] = ch
-	go m.newMetric("/counters/%s.json", name, ch)
+	go m.newMetric("counters", name, ch)
 	return ch
 }
 
@@ -126,7 +134,7 @@ func (m *SimpleMetrics) NewCustomCounter(name string) chan map[string]int64 {
 func (m *SimpleMetrics) NewCustomGauge(name string) chan map[string]int64 {
 	ch := make(chan map[string]int64)
 	m.customGauges[name] = ch
-	go m.newMetric("/gauges/%s.json", name, ch)
+	go m.newMetric("gauges", name, ch)
 	return ch
 }
 
@@ -134,7 +142,7 @@ func (m *SimpleMetrics) NewCustomGauge(name string) chan map[string]int64 {
 func (m *SimpleMetrics) NewGauge(name string) chan int64 {
 	ch := make(chan int64)
 	m.gauges[name] = ch
-	go m.newMetric("/gauges/%s.json", name, ch)
+	go m.newMetric("gauges", name, ch)
 	return ch
 }
 
@@ -149,10 +157,9 @@ func (m *SimpleMetrics) Wait() {
 // appropriate Librato Metrics API endpoint, sets the `Content-Type` header
 // to `application/json`, and sets the `Authorization` header for  HTTP Basic
 // authentication from the `SimpleMetrics` struct.
-func (m *SimpleMetrics) do(format, name string,
-	body map[string]interface{}) error {
+func (m *SimpleMetrics) do(mtype, name string, body tbody) error {
 	if "" != m.source {
-		body["source"] = m.source
+		body[mtype][0]["source"] = m.source
 	}
 	b, err := json.Marshal(body)
 	if nil != err {
@@ -160,19 +167,14 @@ func (m *SimpleMetrics) do(format, name string,
 	}
 	req, err := http.NewRequest(
 		"POST",
-		fmt.Sprintf(
-			"https://metrics-api.librato.com/v1%s",
-			fmt.Sprintf(
-				format,
-				url.QueryEscape(name),
-			),
-		),
+		"https://metrics-api.librato.com/v1/metrics",
 		bytes.NewBuffer(b),
 	)
 	if nil != err {
 		return err
 	}
 	req.Header.Add("Content-Type", "application/json")
+	req.Header.Set("User-Agent", uaString)
 	req.SetBasicAuth(m.user, m.token)
 	_, err = http.DefaultClient.Do(req)
 	return err
@@ -180,14 +182,15 @@ func (m *SimpleMetrics) do(format, name string,
 
 // Create a metric channel and begin processing messages sent
 // to it in a background goroutine.
-func (m *SimpleMetrics) newMetric(format, name string, i interface{}) {
+func (m *SimpleMetrics) newMetric(mtype, name string, i interface{}) {
 	m.running <- true
 	for {
-		body := make(map[string]interface{})
-		if !handle(i, body) {
+		body := make(tbody)
+		body[mtype] = tibody{tmetric{"name": name}}
+		if !handle(i, body[mtype][0]) {
 			break
 		}
-		err := m.do(format, name, body)
+		err := m.do(mtype, name, body)
 		if nil != err {
 			log.Println(err)
 		}

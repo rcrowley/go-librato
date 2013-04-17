@@ -15,7 +15,7 @@ c := m.GetCounter("foo")
 c <- 47
 
 g := m.GetGauge("bar")
-c <- 47
+g <- 47
 
 cc := m.GetCustomCounter("baz")
 cc <- map[string]int64 {
