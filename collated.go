@@ -196,22 +196,20 @@ func (m *CollatedMetrics) Wait() {
 // to `application/json`, and sets the `Authorization` header for  HTTP Basic
 // authentication from the `CollatedMetrics` struct.
 func (m *CollatedMetrics) do(body map[string]interface{}) error {
-	if "" != m.source {
-		body["source"] = m.source
-	}
 	b, err := json.Marshal(body)
 	if nil != err {
 		return err
 	}
 	req, err := http.NewRequest(
 		"POST",
-		"https://metrics-api.librato.com/v1/metrics.json",
+		"https://metrics-api.librato.com/v1/metrics",
 		bytes.NewBuffer(b),
 	)
 	if nil != err {
 		return err
 	}
 	req.Header.Add("Content-Type", "application/json")
+	req.Header.Set("User-Agent", uaString)
 	req.SetBasicAuth(m.user, m.token)
 	_, err = http.DefaultClient.Do(req)
 	return err
@@ -222,13 +220,16 @@ func (m *CollatedMetrics) do(body map[string]interface{}) error {
 func (m *CollatedMetrics) newMetric(name string,
 	i interface{},
 	ch chan map[string]interface{}) {
+
 	m.running <- true
 	for {
-		body := map[string]interface{}{"name": name}
+		body := map[string]interface{}{"name": name, "source": m.source}
 		if !handle(i, body) {
 			break
 		}
-		body["measure_time"] = time.Now()
+		if _, present := body["measure_time"]; !present {
+			body["measure_time"] = time.Now().Unix()
+		}
 		ch <- body
 	}
 	m.running <- false
