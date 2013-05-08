@@ -38,7 +38,25 @@ cg <- map[string]int64 {
 }
 ```
 
-From the command-line:
+Alternatively you can use the collated mode so data will be sent when
+enough measurements are available:
+
+```go
+collate_max := 3
+m := librato.NewCollatedMetrics(user, token, source, collate_max)
+c := m.GetCounter("foo")
+g := m.GetGauge("bar")
+c <- 1
+c <- 2
+c <- 3 // send here ...
+g <- 10
+g <- 20
+g <- 30 // send here ...
+```
+
+As above, custom metrics are also available.
+
+You can also use the command line tool to send your data:
 
 ```sh
 thing | librato -u "rcrowley" -t "ZOMG" -s "$(hostname)"
