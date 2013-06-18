@@ -223,7 +223,11 @@ func (m *CollatedMetrics) newMetric(name string,
 
 	m.running <- true
 	for {
-		body := map[string]interface{}{"name": name, "source": m.source}
+		body := map[string]interface{}{"name": name}
+		if "" != m.source {
+			body["source"] = m.source
+		}
+
 		if !handle(i, body) {
 			break
 		}
