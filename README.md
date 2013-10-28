@@ -10,6 +10,8 @@ From Go:
 
 ```go
 m := librato.NewSimpleMetrics(user, token, source)
+defer m.Wait()
+defer m.Close()
 
 c := m.GetCounter("foo")
 c <- 47
