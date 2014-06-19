@@ -25,6 +25,7 @@ type SimpleMetrics struct {
 	quit, running                chan bool
 	counters, gauges             map[string]chan int64
 	customCounters, customGauges map[string]chan map[string]int64
+	httpClient                   *http.Client
 }
 
 // Create a new `SimpleMetrics` struct with the given credentials and source
@@ -36,6 +37,7 @@ func NewSimpleMetrics(user, token, source string) Metrics {
 		make(map[string]chan int64), make(map[string]chan int64),
 		make(map[string]chan map[string]int64),
 		make(map[string]chan map[string]int64),
+		&http.Client{Transport: http.DefaultTransport},
 	}
 
 	// Track the number of running goroutines.  When it returns to zero,
@@ -57,8 +59,15 @@ func NewSimpleMetrics(user, token, source string) Metrics {
 
 	return m
 }
+
 func NewMetrics(user, token, source string) Metrics {
 	return NewSimpleMetrics(user, token, source)
+}
+
+// SetTransport lets us use a custom Roundtripper
+// Useful in-case some other part of the program overrides http.DefaultClient / http.DefaultTransport
+func (m *SimpleMetrics) SetTransport(transport http.RoundTripper) {
+	m.httpClient.Transport = transport
 }
 
 // Close all metric channels so no new messages may be sent.  This is
@@ -176,7 +185,7 @@ func (m *SimpleMetrics) do(mtype, name string, body tbody) error {
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Set("User-Agent", uaString)
 	req.SetBasicAuth(m.user, m.token)
-	_, err = http.DefaultClient.Do(req)
+	_, err = m.httpClient.Do(req)
 	return err
 }
 
