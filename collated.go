@@ -27,6 +27,10 @@ type CollatedMetrics struct {
 // goroutines used internally.
 func NewCollatedMetrics(user, token, source string,
 	collateMax int) Metrics {
+	if containAnySpaces(source) {
+		log.Println("Warning! Source cannot contain any spaces.")
+	}
+
 	m := &CollatedMetrics{
 		user, token, source,
 		collateMax,

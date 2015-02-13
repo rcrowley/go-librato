@@ -31,6 +31,10 @@ type SimpleMetrics struct {
 // Create a new `SimpleMetrics` struct with the given credentials and source
 // tag.  Initialize all the channels, maps, and goroutines used internally.
 func NewSimpleMetrics(user, token, source string) Metrics {
+	if containAnySpaces(source) {
+		log.Println("Warning! Source cannot contain any spaces.")
+	}
+
 	m := &SimpleMetrics{
 		user, token, source,
 		make(chan bool), make(chan bool),

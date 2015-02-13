@@ -3,6 +3,8 @@
 // <https://github.com/rcrowley/go-librato>
 package librato
 
+import "strings"
+
 type Metrics interface {
 	Close()
 	GetCounter(name string) chan int64
@@ -35,3 +37,17 @@ func handle(i interface{}, bodyMetric tmetric) bool {
 type tbody map[string]tibody
 type tibody []tmetric
 type tmetric map[string]interface{}
+
+// Check whether a string contains any spaces
+func containAnySpaces(str string) bool {
+	// Contains leading or trailing white space.
+	if strings.TrimSpace(str) != str {
+		return true
+	}
+	// Check if there are any spaces between words.
+	if strings.Fields(str)[0] != str {
+		return true
+	}
+
+	return false
+}
