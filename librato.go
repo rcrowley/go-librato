@@ -9,12 +9,12 @@ type Metrics interface {
 	Close()
 	GetCounter(name string) chan int64
 	GetCustomCounter(name string) chan map[string]int64
-	GetCustomGauge(name string) chan map[string]int64
-	GetGauge(name string) chan int64
+	GetCustomGauge(name string) chan map[string]float64
+	GetGauge(name string) chan float64
 	NewCounter(name string) chan int64
 	NewCustomCounter(name string) chan map[string]int64
-	NewCustomGauge(name string) chan map[string]int64
-	NewGauge(name string) chan int64
+	NewCustomGauge(name string) chan map[string]float64
+	NewGauge(name string) chan float64
 	Wait()
 }
 

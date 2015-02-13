@@ -21,11 +21,13 @@ var uaString = func() string {
 // metrics to the API, the source tag for these metrics, bookkeeping for
 // goroutines, and lookup tables for existing metric channels.
 type SimpleMetrics struct {
-	user, token, source          string
-	quit, running                chan bool
-	counters, gauges             map[string]chan int64
-	customCounters, customGauges map[string]chan map[string]int64
-	httpClient                   *http.Client
+	user, token, source string
+	quit, running       chan bool
+	counters            map[string]chan int64
+	gauges              map[string]chan float64
+	customCounters      map[string]chan map[string]int64
+	customGauges        map[string]chan map[string]float64
+	httpClient          *http.Client
 }
 
 // Create a new `SimpleMetrics` struct with the given credentials and source
@@ -38,9 +40,10 @@ func NewSimpleMetrics(user, token, source string) Metrics {
 	m := &SimpleMetrics{
 		user, token, source,
 		make(chan bool), make(chan bool),
-		make(map[string]chan int64), make(map[string]chan int64),
+		make(map[string]chan int64),
+		make(map[string]chan float64),
 		make(map[string]chan map[string]int64),
-		make(map[string]chan map[string]int64),
+		make(map[string]chan map[string]float64),
 		&http.Client{Transport: http.DefaultTransport},
 	}
 
@@ -110,7 +113,7 @@ func (m *SimpleMetrics) GetCustomCounter(name string) chan map[string]int64 {
 }
 
 // Get (possibly by creating) a custom gauge channel by the given name.
-func (m *SimpleMetrics) GetCustomGauge(name string) chan map[string]int64 {
+func (m *SimpleMetrics) GetCustomGauge(name string) chan map[string]float64 {
 	ch, ok := m.customGauges[name]
 	if ok {
 		return ch
@@ -119,7 +122,7 @@ func (m *SimpleMetrics) GetCustomGauge(name string) chan map[string]int64 {
 }
 
 // Get (possibly by creating) a gauge channel by the given name.
-func (m *SimpleMetrics) GetGauge(name string) chan int64 {
+func (m *SimpleMetrics) GetGauge(name string) chan float64 {
 	ch, ok := m.gauges[name]
 	if ok {
 		return ch
@@ -144,16 +147,16 @@ func (m *SimpleMetrics) NewCustomCounter(name string) chan map[string]int64 {
 }
 
 // Create a custom gauge channel by the given name.
-func (m *SimpleMetrics) NewCustomGauge(name string) chan map[string]int64 {
-	ch := make(chan map[string]int64)
+func (m *SimpleMetrics) NewCustomGauge(name string) chan map[string]float64 {
+	ch := make(chan map[string]float64)
 	m.customGauges[name] = ch
 	go m.newMetric("gauges", name, ch)
 	return ch
 }
 
 // Create a gauge channel by the given name.
-func (m *SimpleMetrics) NewGauge(name string) chan int64 {
-	ch := make(chan int64)
+func (m *SimpleMetrics) NewGauge(name string) chan float64 {
+	ch := make(chan float64)
 	m.gauges[name] = ch
 	go m.newMetric("gauges", name, ch)
 	return ch
