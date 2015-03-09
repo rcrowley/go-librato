@@ -185,7 +185,8 @@ func (m *SimpleMetrics) do(mtype, name string, body tbody) error {
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Set("User-Agent", uaString)
 	req.SetBasicAuth(m.user, m.token)
-	_, err = m.httpClient.Do(req)
+	resp, err := m.httpClient.Do(req)
+	resp.Body.Close()
 	return err
 }
 

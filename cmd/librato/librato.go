@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/rcrowley/go-librato"
 	"io"
 	"log"
 	"os"
 	"regexp"
 	"strconv"
+
+	librato "github.com/elimisteve/go-librato"
 )
 
 // Storage for flags.
