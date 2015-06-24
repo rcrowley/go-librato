@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"runtime"
+	"errors"
 )
 
 // Set the UserAgent string
@@ -185,8 +186,12 @@ func (m *SimpleMetrics) do(mtype, name string, body tbody) error {
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Set("User-Agent", uaString)
 	req.SetBasicAuth(m.user, m.token)
-	_, err = m.httpClient.Do(req)
-	return err
+	resp, herr := m.httpClient.Do(req)
+	defer resp.Body.Close()
+	if resp.StatusCode > 204 {
+		herr = errors.New(fmt.Sprintf("unexpected response code: %s", resp.Status))
+	}
+	return herr
 }
 
 // Create a metric channel and begin processing messages sent
